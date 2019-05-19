@@ -1,4 +1,4 @@
-﻿#include <vector>
+#include <vector>
 #include <stdexcept>
 #include <string>
 #include <omp.h>
@@ -264,7 +264,9 @@ void LU_Decomposition(double *A_, double *L_, double *U_, int N)
     LU_Decomposition_(A, L, U, N);
 }
 
-int amain()
+int main()
 {
-   return 0;
+    
+
+    return 0;
 }

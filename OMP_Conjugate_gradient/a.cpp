@@ -21,7 +21,7 @@ using vec = vector<double>;
 vec operator*(double a, const vec& v) {
     vec res(v.size());
     #pragma omp parallel for
-    for (size_t i = 0; i < v.size(); i++)
+    for (int i = 0; i < v.size(); i++)
     {
         res[i] = a * v[i];
     }
@@ -34,7 +34,7 @@ double operator*(const vec& a, const vec& b) {
     int size = a.size();
     double sum = 0;
     #pragma omp parallel for shared(sum, a) reduction(+: sum)
-    for (size_t i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)
     {
         sum += a[i] * b[i];
     }
@@ -44,7 +44,7 @@ vec operator-(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
     #pragma omp parallel for
-    for (size_t i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)
     {
         c[i] = a[i] - b[i];
     }
@@ -54,7 +54,7 @@ vec operator+(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
     #pragma omp parallel for
-    for (size_t i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)
     {
         c[i] = a[i] + b[i];
     }

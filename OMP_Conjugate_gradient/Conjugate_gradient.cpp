@@ -23,7 +23,7 @@ struct CRSMatrix
 vec operator*(const CRSMatrix& m, const vec& v)  {
         vec res;
         //omp
-        for (size_t i = 0; i < m.n; i++)
+        for (int i = 0; i < m.n; i++)
         {
             int first = m.rowPtr[i];
             int last;
@@ -132,7 +132,7 @@ int main()
 vec operator*(double a, const vec& v) {
     vec res(v.size());
     //#omp
-    for (size_t i = 0; i < v.size(); i++)
+    for (int i = 0; i < v.size(); i++)
     {
         res[i] = a * v[i];
     }
@@ -145,7 +145,7 @@ double operator*(const vec& a, const vec& b) {
     int size = a.size();
     double sum = 0;
     //#omp share
-    for (size_t i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)
     {
         sum += a[i] * b[i];
     }
@@ -155,7 +155,7 @@ vec operator-(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
     //#omp
-    for (size_t i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)
     {
         c[i] = a[i] - b[i];
     }
@@ -165,7 +165,7 @@ vec operator+(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
     //#omp
-    for (size_t i = 0; i < size; i++)
+    for (int i = 0; i < size; i++)
     {
         c[i] = a[i] + b[i];
     }
@@ -174,7 +174,7 @@ vec operator+(const vec& a, const vec& b) {
 
 void fill_first_decision(const CRSMatrix & A, const double* const b, Decision& d) {
     d.x.resize(A.n);
-    for (size_t i = 0; i < A.n; i++)
+    for (int i = 0; i < A.n; i++)
         d.x[i] = b[i];
     d.r = vec(b, b + A.n) - A * d.x;
     d.p = d.r;

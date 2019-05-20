@@ -5,6 +5,7 @@
 #include <ctime>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 using namespace std;
 
@@ -18,63 +19,67 @@ struct CRSMatrix
     vec val;
     vector<int> colIndex;
     vector<int> rowPtr;
-    vec operator*(const vec& v) const {
+};
+vec operator*(const CRSMatrix& m, const vec& v)  {
         vec res;
         //omp
-        for (size_t i = 0; i < n; i++)
+        for (size_t i = 0; i < m.n; i++)
         {
-            int first = rowPtr[i];
+            int first = m.rowPtr[i];
             int last;
-            if(i == n-1)
-                last = n;
+            if(i == m.n-1)
+                last = m.nz;
             else
-                last = rowPtr[i + 1];
+                last = m.rowPtr[i + 1];
             double sum = 0;
             for (int j = first;j < last;j++)
             {
-                sum += val[j] * v[colIndex[j]];
+                sum += m.val[j] * v[m.colIndex[j]];
             }
             for (int j = 0; j < first; j++)
             {
-                if (colIndex[j] == colIndex[first])
+                if (m.colIndex[j] == i)
                 {
-                    int pos = binary_search(rowPtr.begin(), rowPtr.end(), j);
-                    sum += val[j] * v[pos];
+                    auto it = upper_bound(m.rowPtr.begin(), m.rowPtr.end(), j);
+                    int pos = it - m.rowPtr.begin();
+                    sum += m.val[j] * v[pos-1];
                 }
             }
             res.push_back(sum);
         }
         return res;
     }
-};
-
 struct Decision {
     vec x;
     vec p;
     vec r;
 };
 
-vec operator*(double a, vec& v);
-vec operator*(vec& v, double a);
-vec operator-(vec& a, vec& b);
-vec operator+(vec& a, vec& b);
-double operator*(vec& a, vec& b);
-
+vec operator*(double a, const vec& v);
+vec operator*(const vec& v, double a);
+vec operator-(const vec& a, const vec& b);
+vec operator+(const vec& a, const vec& b);
+double operator*(const vec& a,const vec& b);
 void fill_first_decision(const CRSMatrix & A, const double* const b, Decision& d);
 
-void solve(CRSMatrix & A, Decision& last_d, Decision& curr_d) {
+void solve(const CRSMatrix & A, const Decision& last_d, Decision& curr_d) {
+    vec v = (A * last_d.p);
+    
     double r_dot = last_d.r * last_d.r;
-    double p_dot = (A*last_d.p) * last_d.p;
+    double p_dot = v * last_d.p;
     double alpha = r_dot / p_dot;
 
     curr_d.x = last_d.x + alpha * last_d.p;
-    curr_d.r = last_d.r - alpha * (A*last_d.p);
-    curr_d.p = last_d.r + ((curr_d.r * curr_d.r) / (last_d.r * last_d.r))*last_d.p;
+    curr_d.r = last_d.r - alpha * v;
+    //curr_d.p = last_d.r + ((curr_d.r * curr_d.r) / (last_d.r * last_d.r))*last_d.p;
+    curr_d.p = curr_d.r + ((curr_d.r * curr_d.r) / (last_d.r * last_d.r))*last_d.p;
+
+    int a = 0;
 }
 
 void SLE_Solver_CRS(CRSMatrix & A, double * b, double eps, int max_iter, double * x, int & count) {
     count = 0;
-    double err;
+    double err = numeric_limits<double>::max();
     Decision last_d;
     Decision curr_d;
     fill_first_decision(A, b, last_d);
@@ -84,8 +89,13 @@ void SLE_Solver_CRS(CRSMatrix & A, double * b, double eps, int max_iter, double 
         solve(A, last_d, curr_d);
         auto tmp = (last_d.x - curr_d.x);
         err = sqrt(tmp * tmp);
+        last_d = curr_d;
+
+        for (auto i = last_d.x.begin(); i != last_d.x.end(); ++i)
+            std::cout << *i << endl;
+        std::cout <<  endl;
     }
-    //copy to x
+    copy(last_d.x.begin(),last_d.x.end(),x);
 }
 
 int main()
@@ -115,24 +125,23 @@ int main()
     for (int i = 0; i < n; i++)
         cout << X[i] << endl;
     cout << "Count: " << count << endl;
-    cin >> n;
+
     return 0;
 }
 
-
-vec operator*(double a, vec& v) {
+vec operator*(double a, const vec& v) {
     vec res(v.size());
-    //#omp 
+    //#omp
     for (size_t i = 0; i < v.size(); i++)
     {
         res[i] = a * v[i];
     }
     return res;
 }
-vec operator*(vec& v, double a) {
+vec operator*(const vec& v, double a) {
     return operator*(a, v);
 }
-double operator*(vec& a, vec& b) {
+double operator*(const vec& a, const vec& b) {
     int size = a.size();
     double sum = 0;
     //#omp share
@@ -142,7 +151,7 @@ double operator*(vec& a, vec& b) {
     }
     return sum;
 }
-vec operator-(vec& a, vec& b) {
+vec operator-(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
     //#omp
@@ -152,7 +161,7 @@ vec operator-(vec& a, vec& b) {
     }
     return c;
 }
-vec operator+(vec& a, vec& b) {
+vec operator+(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
     //#omp

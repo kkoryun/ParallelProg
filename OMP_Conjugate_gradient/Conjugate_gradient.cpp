@@ -11,18 +11,18 @@ using namespace std;
 
 using vec = vector<double>;
 
-struct CRSMatrix
-{
-    int n;
-    int m;
-    int nz;
-    vec val;
-    vector<int> colIndex;
-    vector<int> rowPtr;
-};
+//struct CRSMatrix
+//{
+//    int n;
+//    int m;
+//    int nz;
+//    vec val;
+//    vector<int> colIndex;
+//    vector<int> rowPtr;
+//};
 vec operator*(const CRSMatrix& m, const vec& v)  {
-        vec res;
-        //omp
+        vec res(v.size());
+        #pragma omp parallel for
         for (int i = 0; i < m.n; i++)
         {
             int first = m.rowPtr[i];
@@ -31,10 +31,10 @@ vec operator*(const CRSMatrix& m, const vec& v)  {
                 last = m.nz;
             else
                 last = m.rowPtr[i + 1];
-            double sum = 0;
+      
             for (int j = first;j < last;j++)
             {
-                sum += m.val[j] * v[m.colIndex[j]];
+                res[i] += m.val[j] * v[m.colIndex[j]];
             }
             for (int j = 0; j < first; j++)
             {
@@ -42,10 +42,10 @@ vec operator*(const CRSMatrix& m, const vec& v)  {
                 {
                     auto it = upper_bound(m.rowPtr.begin(), m.rowPtr.end(), j);
                     int pos = it - m.rowPtr.begin();
-                    sum += m.val[j] * v[pos-1];
+                    res[i] += m.val[j] * v[pos-1];
                 }
             }
-            res.push_back(sum);
+            
         }
         return res;
     }
@@ -90,10 +90,6 @@ void SLE_Solver_CRS(CRSMatrix & A, double * b, double eps, int max_iter, double 
         auto tmp = (last_d.x - curr_d.x);
         err = sqrt(tmp * tmp);
         last_d = curr_d;
-
-        for (auto i = last_d.x.begin(); i != last_d.x.end(); ++i)
-            std::cout << *i << endl;
-        std::cout <<  endl;
     }
     copy(last_d.x.begin(),last_d.x.end(),x);
 }
@@ -122,16 +118,12 @@ int main()
     double *X = new double[n];
     int count;
     SLE_Solver_CRS(A, y.data(), 0.0001, 10, X, count);
-    for (int i = 0; i < n; i++)
-        cout << X[i] << endl;
-    cout << "Count: " << count << endl;
-
     return 0;
 }
 
 vec operator*(double a, const vec& v) {
     vec res(v.size());
-    //#omp
+    #pragma omp parallel for
     for (int i = 0; i < v.size(); i++)
     {
         res[i] = a * v[i];
@@ -144,7 +136,7 @@ vec operator*(const vec& v, double a) {
 double operator*(const vec& a, const vec& b) {
     int size = a.size();
     double sum = 0;
-    //#omp share
+    #pragma omp parallel for reduction(+:sum)
     for (int i = 0; i < size; i++)
     {
         sum += a[i] * b[i];
@@ -154,7 +146,7 @@ double operator*(const vec& a, const vec& b) {
 vec operator-(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
-    //#omp
+    #pragma omp parallel for 
     for (int i = 0; i < size; i++)
     {
         c[i] = a[i] - b[i];
@@ -164,7 +156,7 @@ vec operator-(const vec& a, const vec& b) {
 vec operator+(const vec& a, const vec& b) {
     int size = a.size();
     vec c(size);
-    //#omp
+    #pragma omp parallel for 
     for (int i = 0; i < size; i++)
     {
         c[i] = a[i] + b[i];
@@ -174,6 +166,7 @@ vec operator+(const vec& a, const vec& b) {
 
 void fill_first_decision(const CRSMatrix & A, const double* const b, Decision& d) {
     d.x.resize(A.n);
+    #pragma omp parallel for
     for (int i = 0; i < A.n; i++)
         d.x[i] = b[i];
     d.r = vec(b, b + A.n) - A * d.x;

@@ -33,7 +33,7 @@ vec operator*(const vec& v, double a) {
 double operator*(const vec& a, const vec& b) {
     int size = a.size();
     double sum = 0;
-    #pragma omp parallel for shared(sum, a) reduction(+: sum)
+    #pragma omp parallel for reduction(+:sum)
     for (int i = 0; i < size; i++)
     {
         sum += a[i] * b[i];
@@ -66,7 +66,7 @@ vec operator*(CRSMatrix &A, vec &x)
     int size = A.n;
     vec res(A.n);
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < size; i++)
     {
         res[i] = 0;
@@ -116,34 +116,31 @@ void SLE_Solver_CRS(CRSMatrix &A, vec &b, double eps, int max_iter, vec &x, int 
 
     double b_norm = sqrt(b * b);
     
-    for (count = 1; count <= max_iter; count++)
+    for (count = 0; count <= max_iter; count++)
     {
         vec Ap = A * p;
 
         double App = Ap * p;
-        if (App == 0)
+        if (App == 0.0)
             break;
         double alpha = r * r / App;
-        //  double x_norm = 0;
-        // TODO
+ 
 
-         vec tmp = alpha * p;
+        vec tmp = alpha * p;
         x = x +  tmp;
         double x_norm = tmp * tmp;
 
         x_norm = sqrt(x_norm);
-        if (x_norm / b_norm < eps)
-        {
+        if ((x_norm / b_norm) < eps)
             return;
-        }
+   
         vec new_r(size);
-        #pragma omp parallel for
-        for (int i = 0; i < A.n; i++)
-        {
-            new_r[i] = r[i] - alpha * Ap[i];
-        }
+
+    
+        new_r = r - alpha * Ap;
+       
         double rr = r * r;
-        if (rr == 0)
+        if (rr == 0.0)
             break;
         double beta = (new_r * new_r) / rr;
 
@@ -159,10 +156,14 @@ void SLE_Solver_CRS(CRSMatrix &A, double *b, double eps, int max_iter, double *x
     vec b_ = vec(b, b + size);
     vec x_= vec(x, x + size);
     SLE_Solver_CRS(A, b_, eps, max_iter, x_ , count);
+    #pragma omp parallel for
     for (int j = 0; j < size; j++)
     x[j] = x_[j];
 }
 
 int main(){
+    vec a {1,1,1,1};
+    vec b {2,2,2,2};
+    double c = a * b;
     return 0;
 }
